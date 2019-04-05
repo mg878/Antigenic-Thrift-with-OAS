@@ -31,9 +31,9 @@ For[i = 1, i <= Length[genotypes], i++,
 initFreqs = {1.*10^-4, 2.*10^-4, 3.*10^-4, 4.10^-4, 5.10^-4, 6.10^-4, 
    7.*10^-4, 8.*10^-4, 9.*10^-4};
 (*setting the initial frequencies of strains*)
-stepSize = 1*10^-3;
-maxStep = 60*10^4;
-tmax = maxStep*stepSize;
+stepSize = 1*10^-3;(*determines the differentiation step size, i.e. the smaller the more accurate*)
+maxStep = 60*10^4;(*total number of steps*)
+tmax = maxStep*stepSize;(*tmax is gives the total simulation time*)
 eqns1 = Join[
    Table[z[i]'[
       t] == \[Beta] y[i][
