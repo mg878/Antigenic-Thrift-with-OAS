@@ -38,7 +38,7 @@ tmax = maxStep*stepSize;(*tmax is gives the total simulation time*)
 cutoff = 2000; (*cutting out the first 2000 time points to remove any \
 transient dynamics from the analysis*)
 (*Warning: the following For loop can take several hour to run*)
-For[ø = 0., \[CapitalOmega] < 0.75, \[CapitalOmega] += 0.05,
+For[\[CapitalOmega] = 0., \[CapitalOmega] < 0.75, \[CapitalOmega] += 0.05,
  For[\[Gamma] = 0, \[Gamma] < .85, \[Gamma] += 0.01,
   peakTemp = {};
   eqns1 = 
