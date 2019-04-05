@@ -1,0 +1,200 @@
+loci = 3;
+alleles = 2;
+L = alleles^
+  loci; (*total number of antigenic types present in the population*)
+
+
+genotypes = 
+  Flatten[Table[{i, j, k}, {i, 0, alleles - 1}, {j, 0, 
+     alleles - 1}, {k, 0, alleles - 1}], 
+   loci - 1];(*defining genotypes as strings of 0s and 1s*)
+cW = ConstantArray[{}, alleles^
+   loci];(*defining the contribution to Subscript[w, i](t) from any \
+strain that shares alleles with i*)
+For[i = 1, i <= Length[genotypes], i++,
+ For[j = 1, j <= Length[genotypes], j++,
+  For[m = 1, m <= loci, m++,
+   If[genotypes[[i, m]] == genotypes[[j, m]], 
+    AppendTo[cW[[i]], y[j][t]]]]]]
+For[i = 1, i <= Length[genotypes], i++,
+ cW[[i]] = DeleteDuplicates[cW[[i]]];
+ cW[[i]] = Total[cW[[i]]]]
+
+(*setting the values for each parameter -- all defined in the report*)
+\
+
+(*the values below will result in a chaotic strain structure*)
+\[Beta] = 40;
+\[Mu] = 1/50;
+\[Sigma] = 10;
+initFreqs = {1.*10^-4, 2.*10^-4, 3.*10^-4, 4.10^-4, 5.10^-4, 6.10^-4, 
+   7.*10^-4, 8.*10^-4, 9.*10^-4};
+(*setting the initial frequencies of strains*)
+stepSize = 
+  1*10^-3;(*determines the differentiation step size,i.e.the smaller \
+the more accurate*)
+maxStep = 1*10^7;(*total number of steps*)
+tmax = maxStep*stepSize;(*tmax is gives the total simulation time*)
+cutoff = 2000; (*cutting out the first 2000 time points to remove any \
+transient dynamics from the analysis*)
+
+Ytraj = ConstantArray[{}, 8];
+For[k = 1, k <= 8, k++, 
+  Ytraj[[k]] = 
+   ReadList[
+    "C:\\Users\\ghafa\\Desktop\\University related\\University of \
+Oxford\\Works with Sunetra\\MANTIS\\Trajs\\" <> "Ytraj_" <> "_" <> 
+     ToString[\[Gamma]] <> "_" <> ToString[\[CapitalOmega]] <> "_" <> 
+     ToString[k] <> ".txt"]];
+
+detectionThreshold = 
+  1*10^-5; (*A flat frequency threshold, i.e. does not depend on the \
+frequency of local peaks*)
+peakcoordinates = {};(*a list of all local infectious peaks with \
+frequency above detectionThreshold*)
+For[i = 1, i <= Length[Ytraj], i++, 
+ AppendTo[peakcoordinates, 
+  Round[FindPeaks[Transpose[Ytraj[[i]]][[-1]][[cutoff ;; tmax]], 0][[
+    All, 1]]]]];
+For[i = 1, i <= Length[Ytraj], i++, 
+ peakcoordinates[[i]] = 
+  Ytraj[[i]][[peakcoordinates[[i]] + cutoff - 1]]]
+modifiedpeaks = ConstantArray[{}, Length[peakcoordinates]];
+For[j = 1, j <= Length[peakcoordinates], j++, 
+  For[i = 1, i <= Length[peakcoordinates[[j]]], i++, 
+   If[peakcoordinates[[j]][[i, 2]] > detectionThreshold, 
+    AppendTo[modifiedpeaks[[j]], peakcoordinates[[j]][[i, 1]]]]]];
+partitionLength = 2;
+bigPartition = ConstantArray[{}, Length[peakcoordinates]];
+For[j = 1, j <= Length[modifiedpeaks], j++,
+  For[i = 1, i <= Length[modifiedpeaks[[j]]] - partitionLength + 1, i++,
+    AppendTo[
+    bigPartition[[j]], {Ytraj[[j]][[modifiedpeaks[[j]][[i]] + 1]], 
+     Ytraj[[1]][[modifiedpeaks[[j]][[i + 1]] + 1]]}]]];
+betweengaps = ConstantArray[{}, Length[peakcoordinates]];
+dominanceintervals = ConstantArray[{}, Length[peakcoordinates]];
+dominancePeriods = ConstantArray[{}, Length[peakcoordinates]];
+ratioBtoD = ConstantArray[{}, Length[modifiedpeaks]];
+count = ConstantArray[0, Length[peakcoordinates]];
+For[i = 1, i <= Length[modifiedpeaks], i++,
+  For[j = 1, j <= Length[modifiedpeaks[[i]]] - 1, j++,
+   For[k = modifiedpeaks[[i]][[j]], k <= modifiedpeaks[[i]][[j + 1]], 
+    k++, If[Ytraj[[i]][[k + 1, 2]] > detectionThreshold, count[[i]]++,
+      For[o = 1, o <= 100, o++, 
+      If[Ytraj[[i]][[k - count[[i]] - o + 1, 2]] < detectionThreshold,
+        AppendTo[
+        dominanceintervals[[
+         i]], {Ytraj[[i]][[k - count[[i]] - o + 1, 1]], 
+         Ytraj[[i]][[k + 1, 1]]}]; Break[];]]; count[[i]] = 0; 
+     Break[]]]]];
+(*plotting Subscript[y, 1](t) -- the start and end points of a \
+dominance period are represented by black dots*)
+ListLinePlot[{Ytraj[[1]][[3000 ;; 5000]]}, 
+ Epilog -> {Point@Ytraj[[1]][[Flatten[dominanceintervals[[1]]] + 1]], 
+   PointSize[Large]}, PlotRange -> All, Joined -> True]
+
+listdominancePeriods = {};
+listreEmergencePeriods = {};
+listperiodPrevalences = {};
+
+cutoff = 3000;
+tmax = 8000;
+detectionThreshold = 1*10^-5;
+For[\[CapitalOmega] = 0, \[CapitalOmega] <= 0.75, \[CapitalOmega] += 
+   0.05,
+  Print[\[CapitalOmega]];
+  For[\[Gamma] = 0, \[Gamma] < 0.85, \[Gamma] += 0.01,
+   Ytraj = ConstantArray[{}, 8];
+   For[k = 1, k <= 8, k++, 
+    Ytraj[[k]] = 
+     ReadList[
+      "path\\to\\directory\\" <> "Ytraj_" <> "_" <> 
+       ToString[\[Gamma]] <> "_" <> ToString[\[CapitalOmega]] <> "_" <>
+        ToString[k] <> ".txt"]];
+   
+   detectionThreshold = 1*10^-5;
+   peakcoordinates = {};
+   For[i = 1, i <= Length[Ytraj], i++, 
+    AppendTo[peakcoordinates, 
+     Round[FindPeaks[Transpose[Ytraj[[i]]][[-1]][[cutoff ;; tmax]], 
+        0][[All, 1]]]]];
+   For[i = 1, i <= Length[Ytraj], i++, 
+    peakcoordinates[[i]] = 
+     Ytraj[[i]][[peakcoordinates[[i]] + cutoff - 1]]];
+   modifiedpeaks = ConstantArray[{}, Length[peakcoordinates]];
+   avgHeight = {};(*measures the average local peak infectious*)
+   For[j = 1, j <= Length[peakcoordinates], j++, 
+    For[i = 1, i <= Length[peakcoordinates[[j]]], i++, 
+     If[peakcoordinates[[j]][[i, 2]] > detectionThreshold, 
+      AppendTo[modifiedpeaks[[j]], peakcoordinates[[j]][[i, 1]]]; 
+      AppendTo[avgHeight, peakcoordinates[[j]][[i, 2]]]]]];
+   If[Length[modifiedpeaks[[1]]] >= 1, partitionLength = 2; 
+    detectionThreshold = 
+     Mean[avgHeight]/4;(*here we set the threshold frequency to be K=
+    25% of the mean local infectious peak*)
+    bigPartition = ConstantArray[{}, Length[peakcoordinates]];
+    For[j = 1, j <= Length[modifiedpeaks], j++,
+     For[i = 1, i <= Length[modifiedpeaks[[j]]] - partitionLength + 1,
+        i++, AppendTo[
+         bigPartition[[
+          j]], {Ytraj[[j]][[modifiedpeaks[[j]][[i]] + 1]], 
+          Ytraj[[1]][[modifiedpeaks[[j]][[i + 1]] + 1]]}];];];
+    betweengaps = ConstantArray[{}, Length[peakcoordinates]];
+    dominanceintervals = ConstantArray[{}, Length[peakcoordinates]];
+    dominancePeriods = ConstantArray[{}, Length[peakcoordinates]];
+    ratioBtoD = ConstantArray[{}, Length[modifiedpeaks]];
+    count = ConstantArray[0, Length[peakcoordinates]];
+    For[i = 1, i <= Length[modifiedpeaks], i++,
+     For[j = 1, j <= Length[modifiedpeaks[[i]]] - 1, j++,
+       For[k = modifiedpeaks[[i]][[j]], 
+         k <= modifiedpeaks[[i]][[j + 1]], k++, 
+         If[Ytraj[[i]][[k + 1, 2]] > detectionThreshold, count[[i]]++,
+            For[o = 1, o <= 100, o++, 
+            If[Ytraj[[i]][[k - count[[i]] - o + 1, 2]] < 
+               detectionThreshold, 
+              AppendTo[
+               dominanceintervals[[
+                i]], {Ytraj[[i]][[k - count[[i]] - o + 1, 1]], 
+                Ytraj[[i]][[k + 1, 1]]}]; Break[];];]; count[[i]] = 0;
+            Break[]];];];];
+    For[j = 1, j <= Length[modifiedpeaks], j++,
+     For[i = 1, i <= Length[dominanceintervals[[j]]], i++, 
+      AppendTo[dominancePeriods[[j]], 
+       Differences@dominanceintervals[[j]][[i]]]];
+     dominancePeriods[[j]] = Flatten[dominancePeriods[[j]]];];
+    For[j = 1, j <= Length[modifiedpeaks], j++,
+     For[i = 1, i <= Length[dominanceintervals[[j]]] - 1, i++, 
+       If[dominanceintervals[[j]][[i + 1, 1]] - 
+           dominanceintervals[[j]][[i, 2]] > 0, 
+         AppendTo[betweengaps[[j]], 
+          dominanceintervals[[j]][[i + 1, 1]] - 
+           dominanceintervals[[j]][[i, 2]]], 
+         AppendTo[betweengaps[[j]], 1]];];];
+    accumulation = ConstantArray[{}, Length[modifiedpeaks]];
+    For[i = 1, i <= Length[modifiedpeaks], i++, 
+     f = Interpolation[Ytraj[[i]][[1 ;; tmax]]];
+     For[j = 1, j <= Length[dominanceintervals[[i]]], j++,
+      AppendTo[accumulation[[i]], 
+        Integrate[
+         f[x], {x, dominanceintervals[[i, j]][[1]], 
+          dominanceintervals[[i, j]][[2]]}]];];];
+    If[Length[accumulation[[1]]] >= 1,
+     AppendTo[
+      listdominancePeriods, {\[Gamma], \[CapitalOmega], 
+       Mean[N[Map[Mean, dominancePeriods]]]}];
+     AppendTo[
+      listreEmergencePeriods, {\[Gamma], \[CapitalOmega], 
+       Mean[N[Map[Mean, betweengaps]]]}];
+     AppendTo[
+      listperiodPrevalences, {\[Gamma], \[CapitalOmega], 
+       Mean[N[Map[Mean, accumulation]]]}],
+     AppendTo[listdominancePeriods, {\[Gamma], \[CapitalOmega], 0}];
+     AppendTo[listreEmergencePeriods, {\[Gamma], \[CapitalOmega], 0}];
+     AppendTo[listperiodPrevalences, {\[Gamma], \[CapitalOmega], 0}];
+     ],
+    AppendTo[listdominancePeriods, {\[Gamma], \[CapitalOmega], 0}];
+    AppendTo[listreEmergencePeriods, {\[Gamma], \[CapitalOmega], 0}];
+    AppendTo[listperiodPrevalences, {\[Gamma], \[CapitalOmega], 0}];
+    ];
+   ];
+  ];
